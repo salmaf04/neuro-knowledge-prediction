@@ -32,7 +32,4 @@ class Graph:
                 self.build_relations(entity_names)
                 
     def run(self, parsed_entities):
-        self.build_graph(parsed_entities)
-            
-            
-    
+        self.build_graph(parsed_entities)   
