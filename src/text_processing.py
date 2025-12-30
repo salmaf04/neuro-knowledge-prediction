@@ -21,7 +21,11 @@ class TextTokenizer:
         # 5. Eliminar citas bibliográficas en paréntesis como (1), (1, 2), etc.
         text = re.sub(r'\(\d+(?:,\s*\d+)*\)', '', text)
 
-        # 6. Eliminar líneas muy cortas que suelen ser basura de formato
+        # 6. Eliminar símbolos aislados como | y · que son artefactos de PDF
+        text = re.sub(r'\|', '', text)
+        text = re.sub(r'·', '', text)
+
+        # 7. Eliminar líneas muy cortas que suelen ser basura de formato
         clean_lines = [
             line.strip() 
             for line in text.split("\n") 
@@ -37,4 +41,3 @@ class TextTokenizer:
     
     def run(self, text):
         return self.tokenize_sentences(text)
-    
