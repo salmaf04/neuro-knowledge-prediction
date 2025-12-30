@@ -19,7 +19,7 @@ class TextTokenizer:
         text = re.sub(r'\[\d+(?:,\s*\d+)*\]', '', text)
 
         # 5. Eliminar citas bibliográficas en paréntesis como (1), (1, 2), etc.
-        text = re.sub(r'\(\d+(?:,\s*\d+)*\)', '', text)
+        text = re.sub(r'\(\s*\d+(?:,\s*\d+)*\s*\)', '', text)
 
         # 6. Eliminar símbolos aislados como | y · que son artefactos de PDF
         text = re.sub(r'\|', '', text)
