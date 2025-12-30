@@ -15,7 +15,13 @@ class TextTokenizer:
         # 3. Eliminar URLs y correos electrónicos
         text = re.sub(r'http\S+|www\.\S+|\S+@\S+', '', text)
 
-        # 4. Eliminar líneas muy cortas que suelen ser basura de formato
+        # 4. Eliminar citas bibliográficas como [1], [1, 2], etc.
+        text = re.sub(r'\[\d+(?:,\s*\d+)*\]', '', text)
+
+        # 5. Eliminar citas bibliográficas en paréntesis como (1), (1, 2), etc.
+        text = re.sub(r'\(\d+(?:,\s*\d+)*\)', '', text)
+
+        # 6. Eliminar líneas muy cortas que suelen ser basura de formato
         clean_lines = [
             line.strip() 
             for line in text.split("\n") 
@@ -31,6 +37,4 @@ class TextTokenizer:
     
     def run(self, text):
         return self.tokenize_sentences(text)
-    
-     
     
