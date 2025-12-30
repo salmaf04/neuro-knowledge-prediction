@@ -74,6 +74,7 @@ class Settings(BaseSettings):
     pdf_folder: Any = "./corpus" 
     txts_folder: Any = "./txts" 
     model: Any = "HUMADEX/spanish_medical_ner"
+    prediction_method: Any = "common_neighbor_centrality"
     stop_words: Any = STOPWORDS
     blacklist: Any = BLACKLIST
     class Config:
