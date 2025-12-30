@@ -8,21 +8,15 @@ class CorpusReader:
         self.pdf_proccesor = get_settings().pdf_reader
            
     def to_text(self, pdf_file):
-        reader = self.pdf_proccesor(str(pdf_file))
+        doc = self.pdf_proccesor.open(pdf_file)
         article = []
-
-        for page in reader.pages:
-            # Extraer texto de la página
-            txt = page.extract_text()
-            
+        for page in doc:
+            txt = page.get_text("text")
             if txt:
                 txt = txt.replace("-\n", "")
                 txt = txt.replace("\n", " ")
-                
                 article.append(txt)
-
         article_txt = " ".join(article)
-        
         return article_txt
     
     def to_txt(self, article_text, pdf_name):

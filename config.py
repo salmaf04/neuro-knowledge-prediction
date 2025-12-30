@@ -1,6 +1,6 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings
-from pypdf import PdfReader
+import fitz
 from typing import Any
 
 STOPWORDS = set(
@@ -70,7 +70,7 @@ BLACKLIST = {
 }
 
 class Settings(BaseSettings):
-    pdf_reader: Any  = PdfReader
+    pdf_reader: Any  = fitz
     pdf_folder: Any = "./corpus" 
     txts_folder: Any = "./txts" 
     model: Any = "HUMADEX/spanish_medical_ner"
