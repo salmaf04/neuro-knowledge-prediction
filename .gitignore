@@ -1,0 +1,5 @@
+corpus/
+txts/
+__pycache__/
+.env
+.venv

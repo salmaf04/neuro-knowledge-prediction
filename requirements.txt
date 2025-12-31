@@ -1,0 +1,7 @@
+pymupdf
+transformers
+unidecode
+networkx
+nltk
+pydantic-settings
+torch
