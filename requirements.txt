@@ -5,3 +5,5 @@ networkx
 nltk
 pydantic-settings
 torch
+owlready2
+requests
