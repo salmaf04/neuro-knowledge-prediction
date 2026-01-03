@@ -11,6 +11,7 @@ class ExtendedGraph(Graph):
         super().__init__()
         self.graph = graph.graph.copy()
         self.predicted_edges = []
+        self.evaluation_metrics = {}
         
     def predict_edges(self, relacion_busqueda="relacionado_con", n_predicciones=10, epochs=100):
         """
@@ -44,6 +45,18 @@ class ExtendedGraph(Graph):
             device=device,
             random_seed=42
         )
+        
+        self.evaluation_metrics = result.metric_results.to_flat_dict()
+        
+        print("\n" + "="*80)
+        print("MÉTRICAS DE EVALUACIÓN DEL MODELO")
+        print("="*80)
+        for metric_name, metric_value in self.evaluation_metrics.items():
+            if isinstance(metric_value, (int, float)):
+                print(f"{metric_name}: {metric_value:.4f}")
+            else:
+                print(f"{metric_name}: {metric_value}")
+        print("="*80 + "\n")
         
         for u, v in self.graph.edges():
             self.graph[u][v]['origin'] = 'real'
@@ -275,5 +288,90 @@ class ExtendedGraph(Graph):
         
         except Exception as e:
             print(f"Error al exportar las aristas predichas: {e}")
+    
+    def get_extended_graph(self):
+        """
+        Retorna un nuevo objeto Graph que contiene el grafo extendido con todas las aristas
+        (originales + predichas).
+        
+        Returns:
+            Graph: Nuevo objeto Graph con todas las aristas incluidas.
+        """
+        extended_graph_obj = Graph()
+        extended_graph_obj.graph = self.graph.copy()
+        return extended_graph_obj
+    
+    def get_predicted_graph(self):
+        """
+        Retorna un grafo NetworkX que contiene únicamente las aristas predichas.
+        Útil para validación de solo las predicciones.
+        
+        Returns:
+            nx.DiGraph: Grafo con solo las aristas predichas.
+        """
+        G_predicted = nx.DiGraph()
+        
+        for u, v, data in self.graph.edges(data=True):
+            if data.get('origin') == 'predicha':
+                G_predicted.add_edge(u, v, **data)
+        
+        return G_predicted
+    
+    def get_evaluation_metrics(self):
+        """
+        Retorna las métricas de evaluación del modelo.
+        
+        Returns:
+            dict: Diccionario con las métricas de evaluación (MRR, Hits@k, etc.)
+        """
+        return self.evaluation_metrics
+    
+    def print_evaluation_metrics(self):
+        """
+        Imprime las métricas de evaluación del modelo de forma formateada.
+        """
+        if not self.evaluation_metrics:
+            print("No hay métricas de evaluación disponibles. Ejecuta predict_edges() primero.")
+            return
+        
+        print("\n" + "="*80)
+        print("MÉTRICAS DE EVALUACIÓN DEL MODELO")
+        print("="*80)
+        for metric_name, metric_value in self.evaluation_metrics.items():
+            print(f"{metric_name}: {metric_value:.4f}")
+        print("="*80 + "\n")
+    
+    def export_evaluation_metrics_txt(self, txt_name="evaluation_metrics.txt"):
+        """
+        Exporta las métricas de evaluación a un archivo de texto.
+        
+        Args:
+            txt_name (str): Nombre del archivo donde se guardarán las métricas.
+        """
+        if not self.evaluation_metrics:
+            print("No hay métricas de evaluación disponibles. Ejecuta predict_edges() primero.")
+            return
+        
+        try:
+            with open(txt_name, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write("MÉTRICAS DE EVALUACIÓN DEL MODELO\n")
+                f.write("=" * 80 + "\n\n")
+                
+                for metric_name, metric_value in self.evaluation_metrics.items():
+                    f.write(f"{metric_name}: {metric_value:.4f}\n")
+                
+                f.write("\n" + "=" * 80 + "\n")
+                f.write("DESCRIPCIÓN DE LAS MÉTRICAS\n")
+                f.write("=" * 80 + "\n\n")
+                f.write("MRR (Mean Reciprocal Rank): Promedio del inverso del rango de la respuesta correcta.\n")
+                f.write("  - Valores más altos son mejores (rango: 0-1)\n\n")
+                f.write("Hits@k: Proporción de respuestas correctas en el top-k predicciones.\n")
+                f.write("  - Valores más altos son mejores (rango: 0-1)\n\n")
+                
+            print(f"Métricas exportadas exitosamente a: {txt_name}")
+        
+        except Exception as e:
+            print(f"Error al exportar las métricas: {e}")
                 
     
