@@ -5,6 +5,7 @@ from pykeen.pipeline import pipeline
 from pykeen.triples import TriplesFactory
 from pykeen.predict import predict_target
 from graph import Graph
+from config import get_settings
 
 class ExtendedGraph(Graph):
     def __init__(self, graph):
@@ -23,6 +24,7 @@ class ExtendedGraph(Graph):
             n_predicciones (int): Número de predicciones top a considerar por nodo. Por defecto 10.
             epochs (int): Número de épocas para entrenar el modelo. Por defecto 100.
         """
+        settings = get_settings()
         triples_list = []
         for u, v, data in self.graph.edges(data=True):
             rel = data.get('relation', 'relacionado_con')
@@ -40,7 +42,7 @@ class ExtendedGraph(Graph):
         result = pipeline(
             training=training_factory,
             testing=testing_factory,
-            model='RotatE',
+            model=settings.kge_model,
             epochs=epochs,
             device=device,
             random_seed=42
@@ -97,6 +99,8 @@ class ExtendedGraph(Graph):
         print(f"¡Proceso completado! Aristas totales: {self.graph.number_of_edges()}")
         print(f"Aristas predichas añadidas: {len(self.predicted_edges)}")
     
+
+
     def print_img(self, remove_outliers=True, img_name="extended_graph.png"):
         """
         Imprime el grafo enriquecido, diferenciando entre aristas reales y predichas.
@@ -373,5 +377,8 @@ class ExtendedGraph(Graph):
         
         except Exception as e:
             print(f"Error al exportar las métricas: {e}")
-                
-    
+
+    def run(self, relacion_busqueda="relacionado_con", n_predicciones=10, epochs=100):
+
+        self.predict_edges(relacion_busqueda, n_predicciones, epochs)
+        return self.get_extended_graph()
