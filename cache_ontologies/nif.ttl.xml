@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF
+   xmlns:PROTEGE="http://protege.stanford.edu/plugins/owl/protege#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:owl="http://www.w3.org/2002/07/owl#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+>
+  <rdf:Description rdf:about="http://ontology.neuinfo.org/NIF/ttl/nif.ttl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Ontology"/>
+    <owl:versionIRI rdf:resource="http://ontology.neuinfo.org/NIF/ttl/nif/version/1517816168/nif.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/bridge/anatomy-bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/bridge/chemical-bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/bridge/doid-bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/bridge/go-bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/bridge/tax-bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/generated/ksdesc-defs.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/generated/ncbigeneslim.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/generated/NIF-Neuron-HBP-cell-import.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Annotation-Standard.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Cell.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-DOID-Bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Dysfunction.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Function.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Investigation.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-BR-Inferred.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-BrainRegion-Bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-Circuit-Role-Bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-Circuit-Role-Inferred.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-MolecularConstituent-Bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-MolecularConstituent-Inferred.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-Morphology-Bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-Morphology-Inferred.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-NT-Bridge-Inferred.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Neuron-NT-Bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-PRO-Bridge.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Quality.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Subcellular.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/NIF-Unclassified.ttl"/>
+    <owl:imports rdf:resource="http://ontology.neuinfo.org/NIF/ttl/nif_backend.ttl"/>
+    <dc:title>NIF</dc:title>
+    <skos:definition>The Neuroscience Informatics Framework (NIF) knowledge resource including the lexicon used to index all data repositories and literature corpi indexed in NIF.</skos:definition>
+    <owl:versionInfo>3.1 - January 15, 2018</owl:versionInfo>
+    <dc:contributor>Anita Bandrowski (bandrow@gmail.com)</dc:contributor>
+    <dc:contributor>Bill Bug (William.Bug@drexelmed.edu)</dc:contributor>
+    <dc:contributor>Dan Gardner (dan@aplysia.med.cornell.edu)</dc:contributor>
+    <dc:contributor>Fahim Imam (fimam@ncmir.ucsd.edu)</dc:contributor>
+    <dc:contributor>Giorgio Ascoli (ascoli@gmu.edu)</dc:contributor>
+    <dc:contributor>Gordon Shepherd (gordon.shepherd@yale.edu)</dc:contributor>
+    <dc:contributor>Maryann Martone (maryann@ncmir.ucsd.edu)</dc:contributor>
+    <dc:contributor>Sarah Maynard (smaynard@ncmir.ucsd.edu)</dc:contributor>
+    <dc:contributor>Stephen Larson (slarson@ncmir.ucsd.edu)</dc:contributor>
+    <dc:contributor>Tom Gillespie (tgbugs@gmail.com)</dc:contributor>
+    <dc:contributor>Trish Whetzel (plwhetzel@gmail.com)</dc:contributor>
+    <dc:creator>The NIF Project Team</dc:creator>
+    <dc:subject>The Neuroscience Informatics Framework Lexicon</dc:subject>
+    <PROTEGE:defaultLanguage>en</PROTEGE:defaultLanguage>
+  </rdf:Description>
+</rdf:RDF>

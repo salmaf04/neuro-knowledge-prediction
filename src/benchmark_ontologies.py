@@ -25,6 +25,13 @@ def create_mock_graph():
         "UnknownTerm123", "Asdfhjkl"            # Nonsense
     ]
     G.add_nodes_from(nodes)
+    
+    # Add some edges for relation validation testing
+    G.add_edge("Neuron", "Brain") # Strong relation expected
+    G.add_edge("Cortex", "Brain") # Strong
+    G.add_edge("Femur", "Heart")  # Weak relation (both body parts, but distant)
+    G.add_edge("Neuron", "Femur") # Very weak/disconnected
+    
     return G
 
 def run_benchmark():
@@ -44,8 +51,8 @@ def run_benchmark():
     results = []
 
     # 3. Iterate and Validate
-    print(f"{'Ontología':<25} | {'Válidos':<7} | {'Inválidos':<9} | {'Precisión':<10}")
-    print("-" * 55)
+    print(f"{'Ontología':<25} | {'Válidos':<7} | {'Inválidos':<9} | {'Precisión':<10} | {'Dist. Semántica':<15}")
+    print("-" * 80)
 
     for name, url in ontologies.items():
         print(f"Cargando {name}...", end="\r")
@@ -57,7 +64,11 @@ def run_benchmark():
             invalid = report['invalid_nodes']
             precision = report['precision']
             
-            print(f"{name:<25} | {valid:<7} | {invalid:<9} | {precision:.2%}")
+            avg_dist = "N/A"
+            if report.get("edge_report") and report["edge_report"]["avg_distance"]:
+                 avg_dist = f"{report['edge_report']['avg_distance']:.2f}"
+            
+            print(f"{name:<25} | {valid:<7} | {invalid:<9} | {precision:.2%}   | {avg_dist:<15}")
             
             results.append({
                 "ontology": name,
@@ -67,7 +78,7 @@ def run_benchmark():
         except Exception as e:
             print(f"{name:<25} | ERROR: {str(e)}")
 
-    print("-" * 55)
+    print("-" * 80)
     print("\nBenchmark Completado.")
 
 if __name__ == "__main__":

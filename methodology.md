@@ -38,7 +38,11 @@ Realizamos pruebas comparativas (benchmarking) contra cuatro ontologías distint
 1.  **Cargador (Loader)**: Usamos `owlready2` para analizar los archivos OWL.
 2.  **Comparador (Matcher)**: Usamos coincidencia exacta de cadenas + fuzzy match (`difflib`) para manejar ligeras variaciones ortográficas.
 3.  **Puntuación (Scoring)**:
-    -   **Precisión** = $\frac{\text{Nodos Válidos}}{\text{Nodos Totales}}$
+    -   **Precisión de Nodos** = $\frac{\text{Nodos Válidos}}{\text{Nodos Totales}}$
+    -   **Distancia Semántica (Relaciones)**:
+        -   Para cada enlace $A - B$, calculamos el camino más corto en la jerarquía de la ontología.
+        -   Distancia Baja (< 5) $\rightarrow$ Relación Fuerte (Padre/Hijo/Hermano).
+        -   Distancia Alta $\rightarrow$ Relación Débil.
     -   Una mayor precisión con **NIFSTD** indica que el grafo se centra con éxito en la neurociencia.
     -   Una alta precisión con **HPO** implica que el grafo es fuertemente clínico.
 
