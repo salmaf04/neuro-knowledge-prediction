@@ -54,28 +54,46 @@ class GraphValidator:
         Finds the actual owlready2 Class object for a given term.
         """
         term_lower = term.lower()
-        if term_lower in self.known_terms:
-            # This is slow if known_terms is just a set of strings. 
-            # We need a map from label -> class object.
-            # For iteration 1 efficiency: we iterate ontologies to find match.
-            for onto in self.ontologies:
-                # Direct check if possible, mostly we rely on search or known labels
-                # owlready2 search:
+
+        # Fast path: use loader's label->class mapping if available
+        try:
+            classes = self.loader.get_classes_by_label(term_lower)
+            if classes:
+                return classes[0]
+        except Exception:
+            # If loader does not provide mapping for some reason, continue to slower search
+            pass
+
+        # Slower path: iterate ontologies and search (existing behavior)
+        for onto in self.ontologies:
+            # Direct check if possible, mostly we rely on search or known labels
+            # owlready2 search:
+            try:
                 res = onto.search(label = term_lower, _case_sensitive=False)
                 if res: return res[0]
                 res = onto.search(iri = f"*{term}", _case_sensitive=False)
                 if res: return res[0]
-        
-        # Fuzzy match fallback logic implies we might accept "close" terms, 
-        # but for distance calc we need a concrete class.
-        # Let's try to search close matches if exact failed.
+            except Exception:
+                # ignore ontology-specific search errors and continue
+                continue
+
+        # Fuzzy match fallback: try to resolve a close label to a class using the fast mapping first
         matches = get_close_matches(term_lower, self.known_terms, n=1, cutoff=0.85)
         if matches:
             match_label = matches[0]
+            try:
+                classes = self.loader.get_classes_by_label(match_label)
+                if classes:
+                    return classes[0]
+            except Exception:
+                pass
             for onto in self.ontologies:
-                res = onto.search(label = match_label, _case_sensitive=False)
-                if res: return res[0]
-        
+                try:
+                    res = onto.search(label = match_label, _case_sensitive=False)
+                    if res: return res[0]
+                except Exception:
+                    continue
+
         return None
 
     def _calculate_semantic_distance(self, cls_a, cls_b):

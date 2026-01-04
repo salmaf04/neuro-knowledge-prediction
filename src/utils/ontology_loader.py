@@ -2,6 +2,7 @@ import os
 from owlready2 import get_ontology, World, onto_path
 import requests
 import rdflib
+from collections import defaultdict
 
 class OntologyLoader:
     def __init__(self, cache_dir="./cache_ontologies"):
@@ -14,6 +15,8 @@ class OntologyLoader:
             onto_path.append(self.cache_dir)
             
         self.world = World()
+        # Mapping from normalized label -> list of owlready2 Class objects
+        self.label_to_class = defaultdict(list)
 
     def load_from_url(self, url, filename=None):
         """
@@ -65,25 +68,52 @@ class OntologyLoader:
 
         try:
             onto = self.world.get_ontology(local_path).load()
+            # Populate fast label->class mapping for quick lookups
+            self._add_labels_from_ontology(onto)
             return onto
         except Exception as e:
             print(f"Error loading ontology with owlready2: {e}")
             return None
 
-    def get_term_labels(self, ontology):
+    def _add_labels_from_ontology(self, ontology):
         """
-        Extracts all labels from the ontology for fuzzy matching.
-        Returns a dictionary or set of normalized labels.
+        Populate/extend self.label_to_class with labels from the given ontology.
+        Each label maps to a list of Class objects (multiple classes may share a label across ontologies).
         """
-        labels = set()
         if not ontology:
-            return labels
-            
+            return
         for c in ontology.classes():
-            # Add class name
-            labels.add(c.name.lower())
-            # Add label annotations if available
+            # collect candidate labels (primary name + rdfs:label annotations)
+            lbls = {str(c.name).lower()}
             if hasattr(c, 'label'):
                 for l in c.label:
-                    labels.add(str(l).lower())
-        return labels
+                    lbls.add(str(l).lower())
+            for l in lbls:
+                self.label_to_class[l].append(c)
+
+    def get_classes_by_label(self, label):
+        """
+        Return a shallow copy of the list of classes for a normalized label.
+        """
+        if label is None:
+            return []
+        return list(self.label_to_class.get(label.lower(), []))
+
+    def get_term_labels(self, ontology=None):
+        """
+        Extracts all labels from the ontology for fuzzy matching.
+        Returns a set of normalized labels. If ontology is None, returns all labels
+        available in the internal mapping.
+        """
+        labels = set()
+        if ontology:
+            for c in ontology.classes():
+                # Add class name
+                labels.add(c.name.lower())
+                # Add label annotations if available
+                if hasattr(c, 'label'):
+                    for l in c.label:
+                        labels.add(str(l).lower())
+            return labels
+        # If no ontology provided, return labels from the fast mapping
+        return set(self.label_to_class.keys())

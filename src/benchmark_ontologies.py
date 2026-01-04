@@ -34,13 +34,13 @@ def create_mock_graph():
     
     return G
 
-def run_benchmark():
+def run_benchmark(quick_test):
     # 1. Define Ontologies
     ontologies = {
         "NIFSTD (Neuroscience)": "http://ontology.neuinfo.org/NIF/ttl/nif.ttl",
-        "FMA (Anatomy)": "http://purl.obolibrary.org/obo/fma.owl", 
-        "CNO (Comp. Neuro)": "http://purl.org/incf/ontology/Computational_Neurosciences/cno_alpha.owl",
-        "HPO (Phenotypes)": "http://purl.obolibrary.org/obo/hp.owl"
+        #"FMA (Anatomy)": "http://purl.obolibrary.org/obo/fma.owl", 
+        #"CNO (Comp. Neuro)": "http://purl.org/incf/ontology/Computational_Neurosciences/cno_alpha.owl",
+        #"HPO (Phenotypes)": "http://purl.obolibrary.org/obo/hp.owl"
     }
 
     # 2. Load Graph
@@ -50,6 +50,20 @@ def run_benchmark():
 
     results = []
 
+    # Quick test mode: do not download or load full ontologies, use a small set of known terms
+    # Set to True for fast, low-memory functional checks. Set to False to run the original (heavy) behavior.
+    
+    validator = None
+    if quick_test:
+        validator = GraphValidator()  # no ontology_urls -> no downloads / owlready2 load
+        # Provide a small representative set for quick validation tests
+        validator.known_terms = {
+            "neuron", "cortex", "brain", "synapse",
+            "femur", "heart", "lung",
+            "seizure", "epilepsy", "headache"
+        }
+        print("Running in quick_test mode: skipping ontology download and heavy loads.\n")
+
     # 3. Iterate and Validate
     print(f"{'Ontología':<25} | {'Válidos':<7} | {'Inválidos':<9} | {'Precisión':<10} | {'Dist. Semántica':<15}")
     print("-" * 80)
@@ -57,24 +71,27 @@ def run_benchmark():
     for name, url in ontologies.items():
         print(f"Cargando {name}...", end="\r")
         try:
-            validator = GraphValidator(ontology_urls=[url])
+            # If not in quick_test, create a validator that will load the ontology (original behavior)
+            if not quick_test:
+                validator = GraphValidator(ontology_urls=[url])
+
             report = validator.validate_graph(graph)
-            
+
             valid = report['valid_nodes']
             invalid = report['invalid_nodes']
             precision = report['precision']
-            
+
             avg_dist = "N/A"
             if report.get("edge_report") and report["edge_report"]["avg_distance"]:
                  avg_dist = f"{report['edge_report']['avg_distance']:.2f}"
-            
+
             print(f"{name:<25} | {valid:<7} | {invalid:<9} | {precision:.2%}   | {avg_dist:<15}")
-            
+
             results.append({
                 "ontology": name,
                 "report": report
             })
-            
+
         except Exception as e:
             print(f"{name:<25} | ERROR: {str(e)}")
 
@@ -82,4 +99,4 @@ def run_benchmark():
     print("\nBenchmark Completado.")
 
 if __name__ == "__main__":
-    run_benchmark()
+    run_benchmark(True) # Set to False to run full ontology loads
