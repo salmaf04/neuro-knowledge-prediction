@@ -8,3 +8,4 @@ torch
 owlready2
 requests
 rdflib
+rapidfuzz

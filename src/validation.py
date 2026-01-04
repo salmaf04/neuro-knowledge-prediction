@@ -18,13 +18,23 @@ except ImportError:
         # Emergency fallback
         sys.path.append(os.path.join(current_dir, "utils"))
         from ontology_loader import OntologyLoader
-from difflib import get_close_matches
+
+# Try to use rapidfuzz for fuzzy matching; fallback to difflib if not available
+try:
+    from rapidfuzz import process, fuzz
+    _USE_RAPIDFUZZ = True
+except Exception:
+    from difflib import get_close_matches
+    _USE_RAPIDFUZZ = False
 
 class GraphValidator:
     def __init__(self, ontology_urls=None):
         self.loader = OntologyLoader()
         self.known_terms = set()
         self.ontologies = []
+        # Caches to avoid recomputing expensive operations
+        self._dist_cache = {}        # (id_a, id_b) -> distance
+        self._ancestors_cache = {}   # class_obj -> {ancestor: dist}
         
         if ontology_urls:
             for url in ontology_urls:
@@ -33,6 +43,34 @@ class GraphValidator:
                     self.ontologies.append(onto)
                     self.known_terms.update(self.loader.get_term_labels(onto))
     
+    def _choose_cutoff(self, term: str) -> int:
+        """
+        Compute a dynamic cutoff (0-100) for fuzzy matching.
+        Heuristics:
+        - Short terms (<=3) need stricter cutoff to avoid false positives.
+        - Medium terms get a small boost.
+        - Very long terms relax the cutoff a bit.
+        - Larger known_terms vocab increases cutoff slightly.
+        Returns an integer in [50, 98].
+        """
+        t = (term or "").strip().lower()
+        length = len(t)
+        base = 85
+        if length <= 3:
+            base += 10
+        elif length <= 6:
+            base += 5
+        if length >= 20:
+            base -= 10
+
+        vocab = len(self.known_terms) if self.known_terms else 0
+        if vocab > 10000:
+            base += 5
+        elif vocab > 1000:
+            base += 2
+
+        return max(50, min(98, int(base)))
+
     def validate_term(self, term):
         """
         Checks if a term exists in the loaded ontologies.
@@ -42,11 +80,22 @@ class GraphValidator:
         if term_lower in self.known_terms:
             return {"status": "valid", "match": term_lower, "type": "exact"}
         
-        # Fuzzy match
-        matches = get_close_matches(term_lower, self.known_terms, n=1, cutoff=0.85)
-        if matches:
-            return {"status": "valid", "match": matches[0], "type": "fuzzy"}
-            
+        # Dynamic cutoff (0-100)
+        cutoff = self._choose_cutoff(term_lower)
+
+        # Fuzzy match using rapidfuzz when available (score 0-100)
+        if _USE_RAPIDFUZZ and self.known_terms:
+            match = process.extractOne(term_lower, self.known_terms, scorer=fuzz.ratio, score_cutoff=cutoff)
+            if match:
+                matched_label, score = match[0], match[1]
+                return {"status": "valid", "match": matched_label, "type": "fuzzy", "score": score}
+        else:
+            # difflib expects cutoff in 0..1
+            if self.known_terms:
+                matches = get_close_matches(term_lower, self.known_terms, n=1, cutoff=cutoff/100.0)
+                if matches:
+                    return {"status": "valid", "match": matches[0], "type": "fuzzy"}
+
         return {"status": "invalid", "match": None, "type": "none"}
 
     def _get_ontology_class(self, term):
@@ -78,15 +127,36 @@ class GraphValidator:
                 continue
 
         # Fuzzy match fallback: try to resolve a close label to a class using the fast mapping first
-        matches = get_close_matches(term_lower, self.known_terms, n=1, cutoff=0.85)
-        if matches:
-            match_label = matches[0]
-            try:
-                classes = self.loader.get_classes_by_label(match_label)
-                if classes:
-                    return classes[0]
-            except Exception:
-                pass
+        match_label = None
+        cutoff = self._choose_cutoff(term_lower)
+        if _USE_RAPIDFUZZ and self.known_terms:
+            candidates = process.extract(term_lower, self.known_terms, scorer=fuzz.ratio, limit=2)
+            if candidates:
+                best_label, best_score = candidates[0][0], candidates[0][1]
+                second_score = candidates[1][1] if len(candidates) > 1 else None
+                # Accept if above cutoff or clear gap relative to second candidate
+                if best_score >= cutoff or (second_score is not None and (best_score - second_score) >= 10 and best_score >= (cutoff - 5)):
+                    match_label = best_label
+                    try:
+                        classes = self.loader.get_classes_by_label(match_label)
+                        if classes:
+                            return classes[0]
+                    except Exception:
+                        pass
+        else:
+            if self.known_terms:
+                matches = get_close_matches(term_lower, self.known_terms, n=2, cutoff=cutoff/100.0)
+                if matches:
+                    match_label = matches[0]
+                    try:
+                        classes = self.loader.get_classes_by_label(match_label)
+                        if classes:
+                            return classes[0]
+                    except Exception:
+                        pass
+
+        # Final slow fallback: try search on ontologies for the fuzzy label
+        if match_label:
             for onto in self.ontologies:
                 try:
                     res = onto.search(label = match_label, _case_sensitive=False)
@@ -99,13 +169,23 @@ class GraphValidator:
     def _calculate_semantic_distance(self, cls_a, cls_b):
         """
         Calculates distance via Lowest Common Ancestor (LCA) in is-a hierarchy.
-        Returns int distance or float('inf').
+        Returns int distance or float('inf'). Uses caching to avoid recomputation.
         """
         if cls_a == cls_b:
             return 0
-            
-        # Get ancestors with distance (BFS up)
+
+        def _id_of(c):
+            return getattr(c, 'iri', None) or getattr(c, 'name', None) or str(c)
+
+        key = tuple(sorted((_id_of(cls_a), _id_of(cls_b))))
+        if key in self._dist_cache:
+            return self._dist_cache[key]
+
+        # Get ancestors with distance (BFS up) with memoization per node
         def get_ancestors_dist(start_node):
+            if start_node in self._ancestors_cache:
+                return self._ancestors_cache[start_node]
+
             dists = {start_node: 0}
             queue = [start_node]
             idx = 0
@@ -113,36 +193,41 @@ class GraphValidator:
                 curr = queue[idx]
                 idx += 1
                 curr_dist = dists[curr]
-                
+
                 # owlready2 is_a gives superclasses
                 try:
                     parents = curr.is_a
                 except AttributeError:
                     continue
-                    
+
                 for p in parents:
                     # Filter for actual entities (ignore restrictions like 'part_of some X')
                     if hasattr(p, 'name') and p not in dists:
                         dists[p] = curr_dist + 1
                         queue.append(p)
+
+            # store in cache
+            self._ancestors_cache[start_node] = dists
             return dists
 
         dists_a = get_ancestors_dist(cls_a)
         dists_b = get_ancestors_dist(cls_b)
-        
+
         # Find common ancestors
         common = set(dists_a.keys()) & set(dists_b.keys())
-        
+
         if not common:
+            self._dist_cache[key] = float('inf')
             return float('inf')
-            
+
         # Min distance = min(dist_a + dist_b)
         min_dist = float('inf')
         for anc in common:
             d = dists_a[anc] + dists_b[anc]
             if d < min_dist:
                 min_dist = d
-                
+
+        self._dist_cache[key] = min_dist
         return min_dist
 
     def validate_edges(self, graph):
@@ -222,23 +307,60 @@ class GraphValidator:
         return report
 
 if __name__ == "__main__":
-    # Example usage / Test
-    # Using a small subset or a public URL for testing. 
-    # NIFSTD is large, so for this example/placeholder we might might want to mock or use a small file.
-    # For now, let's try to load a very small simple ontology or just instantiate the class.
-    
-    validator = GraphValidator() 
-    # In a real run, we would pass: 
-    # ontology_urls=["http://ontology.neuinfo.org/NIF/NIF-Structural-Anatomy.owl"]
-    
-    # Create a dummy graph
+    # Batch test/demo for validate_term and fuzzy behavior
+    validator = GraphValidator()
+
+    # Provide a moderate known_terms set for testing fuzzy behavior
+    validator.known_terms = {
+        "neuron", "cortex", "brain", "synapse",
+        "hippocampus", "hippocampal", "femur", "heart", "lung",
+        "seizure", "epilepsy", "headache", "neural network", "simulation"
+    }
+
+    examples = [
+        "Neuron",        # exact
+        "neoron",        # small typo
+        "HippoCampus",   # case + spacing
+        "hippocampal",   # alternate form
+        "fumur",         # typo
+        "nn",            # very short ambiguous
+        "NeuralNet",     # partial compound
+        "Asdfhjkl",      # nonsense
+        "brain",         # exact
+        "head ache"      # spaced form
+    ]
+
+    print("\n=== validate_term batch demo ===")
+    for q in examples:
+        res = validator.validate_term(q)
+        line = f"Query: '{q}' -> {res}"
+
+        # If rapidfuzz available, show cutoff and best candidate(s)
+        if _USE_RAPIDFUZZ and validator.known_terms:
+            cutoff = validator._choose_cutoff(q)
+            try:
+                best = process.extractOne(q.lower(), validator.known_terms, scorer=fuzz.ratio)
+                if best:
+                    # rapidfuzz may return (label, score) or (label, score, idx)
+                    if isinstance(best, (list, tuple)) and len(best) >= 2:
+                        best_label, best_score = best[0], best[1]
+                    else:
+                        best_label, best_score = str(best), None
+                    line += f"    | cutoff={cutoff} best=({best_label}, {best_score})"
+            except Exception as e:
+                line += f"    | rapidfuzz error: {e}"
+
+        print(line)
+
+    # Mock graph validation to show integration (edges + node validation)
+    print("\n=== Mock graph validation ===")
     G = nx.Graph()
-    G.add_node("Neuron")
-    G.add_node("Cortex")
-    G.add_node("Asdflkjsd") # Invalid
-    
-    # Mocking known terms for the test since we didn't load a real massive ontology in this quick test
-    validator.known_terms = {"neuron", "cortex", "brain", "synapse"}
-    
+    G.add_nodes_from(["Neuron", "Cortex", "Asdfhjkl", "Femur"])
+    G.add_edge("Neuron", "Cortex")
+    G.add_edge("Neuron", "Femur")
+
     report = validator.validate_graph(G)
-    print("Validation Report:", report)
+    print("Graph validation report:")
+    print(report)
+
+    print("\nDemo complete. Run this script directly to re-run the tests.")
