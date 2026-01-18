@@ -44,7 +44,42 @@ class SemanticAligner:
         self.ontology_data = df
         return self.ontology_embeddings
 
+    def _extract_from_owl(self, path):
+        """
+        Navega la ontología OWL y extrae metadatos de las clases.
+        """
+        print(f"Cargando ontología OWL desde {path}...")
+        # Carga local de la ontología
+        onto = get_ontology(f"file://{path}").load()
+        
+        data = []
+        
+        for cls in onto.classes():
+            # 1. Obtener Label (Nombre de la clase)
+            label = cls.label.first() or cls.name
+            
+            # 2. Obtener Sinónimos 
+            # Intentamos varias propiedades comunes en ontologías biomédicas
+            syns = []
+            if hasattr(cls, "hasExactSynonym"): syns.extend(cls.hasExactSynonym)
+            if hasattr(cls, "altLabel"): syns.extend(cls.altLabel)
+            
+            # 3. Obtener Descripción/Definición
+            # rdfs.comment es el estándar, IAO_0000115 es común en OBO/Neuro
+            description = ""
+            if cls.comment:
+                description = " ".join(cls.comment)
+            elif hasattr(cls, "IAO_0000115"):
+                description = " ".join(getattr(cls, "IAO_0000115"))
 
+            data.append({
+                "id": cls.iri,
+                "label": label,
+                "synonyms": ", ".join(syns) if syns else "",
+                "description": description
+            })
+            
+        return pd.DataFrame(data)
 
     def calculate_rdo(self, doc_id, parsed_entities):
         """
