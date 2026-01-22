@@ -1,0 +1,12 @@
+|index|term|best\_match\_label|similarity|status|
+|---|---|---|---|---|
+|220|basal|Basal|0\.9916|Mapped|
+|1398|occipital|Occipital|0\.9915|Mapped|
+|646|brain|brain|0\.9906|Mapped|
+|156|cancer|Cancer|0\.9894|Mapped|
+|558|oral|Oral|0\.9889|Mapped|
+|491|facial|Facial|0\.9887|Mapped|
+|962|temporal|Temporal|0\.9884|Mapped|
+|981|abscess|abscess|0\.9877|Mapped|
+|592|somatostatina|Somatostatin|0\.9694|Mapped|
+|910|material|material\_entity|0\.9666|Mapped|
